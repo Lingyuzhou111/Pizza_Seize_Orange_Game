@@ -93,19 +93,48 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
-        // 设置画布大小为窗口大小
-        function resizeCanvas() {
-            const maxWidth = 800;
-            const maxHeight = 600;
-            const windowRatio = window.innerWidth / window.innerHeight;
-            const gameRatio = maxWidth / maxHeight;
+        // 添加设备检测函数
+        function isMobile() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
 
-            if (windowRatio < gameRatio) {
-                canvas.width = window.innerWidth * 0.95;
-                canvas.height = (canvas.width / gameRatio);
+        // 修改画布大小调整函数
+        function resizeCanvas() {
+            if (isMobile()) {
+                // 手机端适配
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                
+                // 调整游戏元素大小
+                if (game) {
+                    // 根据屏幕大小调整玩家大小
+                    game.player.size = Math.min(window.innerWidth, window.innerHeight) * 0.05;
+                    // 调整玩家初始位置
+                    game.player.x = canvas.width / 2;
+                    game.player.y = canvas.height / 2;
+                    // 调整虚拟摇杆大小和位置
+                    const joystick = document.getElementById('joystick');
+                    if (joystick) {
+                        joystick.style.width = '25vw';
+                        joystick.style.height = '25vw';
+                        joystick.style.bottom = '10vh';
+                        joystick.style.left = '10vw';
+                    }
+                }
             } else {
-                canvas.height = window.innerHeight * 0.95;
-                canvas.width = canvas.height * gameRatio;
+                // 电脑端保持原有比例
+                const maxWidth = 800;
+                const maxHeight = 600;
+                const windowRatio = window.innerWidth / window.innerHeight;
+                const gameRatio = maxWidth / maxHeight;
+
+                if (windowRatio < gameRatio) {
+                    canvas.width = window.innerWidth * 0.95;
+                    canvas.height = (canvas.width / gameRatio);
+                } else {
+                    canvas.height = window.innerHeight * 0.95;
+                    canvas.width = canvas.height * gameRatio;
+                }
             }
         }
 
@@ -452,7 +481,10 @@
             });
 
             // 画敌人 - 使用emoji
-            ctx.font = `${game.player.size * 2}px Arial`;
+            const enemySize = isMobile() ? 
+                `${Math.min(window.innerWidth, window.innerHeight) * 0.08}px` : 
+                `${game.player.size * 2}px`;
+            ctx.font = `${enemySize} Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             game.enemies.forEach(enemy => {
@@ -460,7 +492,10 @@
             });
 
             // 画道具 - 使用emoji
-            ctx.font = `${game.player.size}px Arial`;  // 设置emoji大小
+            const powerupSize = isMobile() ? 
+                `${Math.min(window.innerWidth, window.innerHeight) * 0.05}px` : 
+                `${game.player.size}px`;
+            ctx.font = `${powerupSize} Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             game.powerups.forEach(powerup => {
@@ -517,6 +552,30 @@
             update();
             draw();
             requestAnimationFrame(gameLoop);
+        }
+
+        // 添加屏幕方向变化监听
+        window.addEventListener('orientationchange', function() {
+            setTimeout(resizeCanvas, 100); // 延迟执行以确保获取正确的屏幕尺寸
+        });
+
+        // 修改游戏初始化部分
+        function initGameEnvironment() {
+            if (isMobile()) {
+                // 手机端特定设置
+                game.shotDelay = 300; // 略微降低射击频率
+                game.player.speed = Math.min(window.innerWidth, window.innerHeight) * 0.01; // 根据屏幕大小调整速度
+                
+                // 显示虚拟摇杆
+                const joystick = document.getElementById('joystick');
+                if (joystick) {
+                    joystick.style.display = 'block';
+                }
+                
+                // 添加阻止页面滚动
+                document.body.style.overflow = 'hidden';
+                document.body.style.position = 'fixed';
+            }
         }
 
         gameLoop();
