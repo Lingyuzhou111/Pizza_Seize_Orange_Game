@@ -139,8 +139,11 @@
             e.preventDefault();
             const touch = e.touches[0];
             const rect = canvas.getBoundingClientRect();
-            touchPos.x = touch.clientX - rect.left;
-            touchPos.y = touch.clientY - rect.top;
+            const scaleX = canvas.width / rect.width;    // 计算画布缩放比例
+            const scaleY = canvas.height / rect.height;
+            
+            touchPos.x = (touch.clientX - rect.left) * scaleX;
+            touchPos.y = (touch.clientY - rect.top) * scaleY;
             touchPos.touching = true;
         }
 
@@ -149,8 +152,11 @@
             if (!touchPos.touching) return;
             const touch = e.touches[0];
             const rect = canvas.getBoundingClientRect();
-            touchPos.x = touch.clientX - rect.left;
-            touchPos.y = touch.clientY - rect.top;
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            touchPos.x = (touch.clientX - rect.left) * scaleX;
+            touchPos.y = (touch.clientY - rect.top) * scaleY;
         }
 
         function handleTouchEnd() {
@@ -393,22 +399,41 @@
         // 1. 先，将图片加载移到游戏初始化时
         const playerImg = new Image();
         let playerImgLoaded = false;
+        let gameStarted = false;
 
-        // 在游戏开始前加载图片
+        function startGame() {
+            if (!gameStarted) {
+                gameStarted = true;
+                initGameEnvironment();
+                gameLoop();
+            }
+        }
+
         playerImg.onload = function() {
             playerImgLoaded = true;
             console.log('Player image loaded successfully');
+            startGame(); // 图片加载完成后启动游戏
         };
+
         playerImg.onerror = function() {
             console.error('Failed to load player image');
             playerImgLoaded = false;
+            startGame(); // 即使图片加载失败也启动游戏，会显示占位符
         };
-        playerImg.src = './imgs/juzi.png';
 
         // 2. 修改draw函数中的玩家绘制部分
         function draw() {
             ctx.fillStyle = '#111';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 添加调试信息
+            if (isMobile()) {
+                ctx.fillStyle = '#fff';
+                ctx.font = '20px Arial';
+                ctx.fillText(`Canvas: ${canvas.width}x${canvas.height}`, 10, 20);
+                ctx.fillText(`Touch: ${touchPos.touching ? 'Yes' : 'No'}`, 10, 40);
+                ctx.fillText(`Pos: ${Math.round(touchPos.x)},${Math.round(touchPos.y)}`, 10, 60);
+            }
 
             // 画玩家
             const playerDisplaySize = game.player.size * 1.5;
@@ -482,12 +507,15 @@
         }
 
         function restartGame() {
+            const currentSize = game.player.size;
+            const currentSpeed = game.player.speed;
+            
             game = {
                 player: {
                     x: canvas.width / 2,
                     y: canvas.height / 2,
-                    size: 25,
-                    speed: 5,
+                    size: currentSize, // 保持当前大小
+                    speed: currentSpeed, // 保持当前速度
                     bulletCount: 1
                 },
                 bullets: [],
@@ -495,18 +523,25 @@
                 powerups: [],
                 time: 0,
                 kills: 0,
-                difficulty: 1,
+                difficulty: isMobile() ? 0.8 : 1,
                 isGameOver: false,
                 lastShot: 0,
-                shotDelay: 250
+                shotDelay: isMobile() ? 300 : 250
             };
+            
             document.getElementById('gameOver').style.display = 'none';
         }
 
         function gameLoop() {
-            update();
-            draw();
-            requestAnimationFrame(gameLoop);
+            if (!gameStarted) return;
+            
+            try {
+                update();
+                draw();
+                requestAnimationFrame(gameLoop);
+            } catch (error) {
+                console.error('Game loop error:', error);
+            }
         }
 
         // 添加屏幕方向变化监听
@@ -519,11 +554,22 @@
             if (isMobile()) {
                 // 手机端特定设置
                 game.shotDelay = 300;
-                game.player.speed = Math.min(window.innerWidth, window.innerHeight) * 0.01;
+                game.player.speed = Math.min(window.innerWidth, window.innerHeight) * 0.015; // 增加移动速度
                 
-                // 添加阻止页面滚动
+                // 添加移动端优化
                 document.body.style.overflow = 'hidden';
                 document.body.style.position = 'fixed';
+                document.body.style.width = '100%';
+                document.body.style.height = '100%';
+                
+                // 禁用默认触摸行为
+                document.addEventListener('touchmove', function(e) {
+                    e.preventDefault();
+                }, { passive: false });
+                
+                // 调整游戏参数
+                game.player.size = Math.min(window.innerWidth, window.innerHeight) * 0.05;
+                game.difficulty = 0.8; // 降低初始难度
             }
         }
 
@@ -550,7 +596,8 @@
         // 确保在游戏初始化时调用
         initGameEnvironment();
 
-        gameLoop();
+        // 启动游戏
+        playerImg.src = './imgs/juzi.png';
     </script>
 </body>
 </html>
