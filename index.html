@@ -43,36 +43,9 @@
             font-size: calc(14px + 1vw);
             z-index: 100;
         }
-        #joystick {
-            position: fixed;
-            bottom: 50px;
-            left: 50px;
-            width: 100px;
-            height: 100px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            display: none;
-            touch-action: none;
-        }
-        #stick {
-            position: absolute;
-            width: 40px;
-            height: 40px;
-            background: rgba(255, 255, 255, 0.5);
-            border-radius: 50%;
-            top: 30px;
-            left: 30px;
-            touch-action: none;
-        }
-        @media (max-width: 768px) {
-            #joystick {
-                display: block;
-            }
-        }
     </style>
 </head>
 <body>
-    <!-- 删除原来的img标签，不再需要加载外部图片 -->
     <div id="stats">
         时间: <span id="time">0</span>秒<br>
         击杀: <span id="kills">0</span><br>
@@ -84,9 +57,6 @@
         存活时间: <span id="finalTime">0</span>秒<br>
         击杀数: <span id="finalKills">0</span><br>
         <button onclick="restartGame()" style="font-size: calc(12px + 1vw); padding: 10px 20px;">重新开始</button>
-    </div>
-    <div id="joystick">
-        <div id="stick"></div>
     </div>
 
     <script>
@@ -112,14 +82,6 @@
                     // 调整玩家初始位置
                     game.player.x = canvas.width / 2;
                     game.player.y = canvas.height / 2;
-                    // 调整虚拟摇杆大小和位置
-                    const joystick = document.getElementById('joystick');
-                    if (joystick) {
-                        joystick.style.width = '25vw';
-                        joystick.style.height = '25vw';
-                        joystick.style.bottom = '10vh';
-                        joystick.style.left = '10vw';
-                    }
                 }
             } else {
                 // 电脑端保持原有比例
@@ -161,111 +123,82 @@
             shotDelay: 250
         };
 
-        // 虚拟摇杆控制
-        const joystick = document.getElementById('joystick');
-        const stick = document.getElementById('stick');
-        let joystickData = {
-            touching: false,
-            startX: 0,
-            startY: 0,
-            moveX: 0,
-            moveY: 0
+        // 添加触屏控制
+        let touchPos = {
+            x: 0,
+            y: 0,
+            touching: false
         };
 
-        function handleJoystickStart(e) {
-            const touch = e.touches[0];
-            const joystickRect = joystick.getBoundingClientRect();
-            joystickData.touching = true;
-            joystickData.startX = touch.clientX - joystickRect.left;
-            joystickData.startY = touch.clientY - joystickRect.top;
-            updateStickPosition(touch.clientX - joystickRect.left, touch.clientY - joystickRect.top);
-        }
+        // 添加触屏事件监听
+        canvas.addEventListener('touchstart', handleTouchStart);
+        canvas.addEventListener('touchmove', handleTouchMove);
+        canvas.addEventListener('touchend', handleTouchEnd);
 
-        function handleJoystickMove(e) {
-            if (!joystickData.touching) return;
+        function handleTouchStart(e) {
             e.preventDefault();
             const touch = e.touches[0];
-            const joystickRect = joystick.getBoundingClientRect();
-            const x = touch.clientX - joystickRect.left;
-            const y = touch.clientY - joystickRect.top;
-            updateStickPosition(x, y);
+            const rect = canvas.getBoundingClientRect();
+            touchPos.x = touch.clientX - rect.left;
+            touchPos.y = touch.clientY - rect.top;
+            touchPos.touching = true;
         }
 
-        function handleJoystickEnd() {
-            joystickData.touching = false;
-            stick.style.transform = 'translate(-50%, -50%)';
-            joystickData.moveX = 0;
-            joystickData.moveY = 0;
+        function handleTouchMove(e) {
+            e.preventDefault();
+            if (!touchPos.touching) return;
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            touchPos.x = touch.clientX - rect.left;
+            touchPos.y = touch.clientY - rect.top;
         }
 
-        function updateStickPosition(x, y) {
-            const deltaX = x - 50;
-            const deltaY = y - 50;
-            const distance = Math.min(50, Math.sqrt(deltaX * deltaX + deltaY * deltaY));
-            const angle = Math.atan2(deltaY, deltaX);
-            const moveX = Math.cos(angle) * distance;
-            const moveY = Math.sin(angle) * distance;
-            
-            stick.style.transform = `translate(${moveX}px, ${moveY}px)`;
-            
-            joystickData.moveX = moveX / 50;
-            joystickData.moveY = moveY / 50;
+        function handleTouchEnd() {
+            touchPos.touching = false;
         }
 
-        joystick.addEventListener('touchstart', handleJoystickStart);
-        joystick.addEventListener('touchmove', handleJoystickMove);
-        joystick.addEventListener('touchend', handleJoystickEnd);
-        joystick.addEventListener('touchcancel', handleJoystickEnd);
-
-        const keys = {
-            w: false,
-            s: false,
-            a: false,
-            d: false
-        };
-
-        document.addEventListener('keydown', (e) => {
-            if (keys.hasOwnProperty(e.key.toLowerCase())) {
-                keys[e.key.toLowerCase()] = true;
-            }
-        });
-
-        document.addEventListener('keyup', (e) => {
-            if (keys.hasOwnProperty(e.key.toLowerCase())) {
-                keys[e.key.toLowerCase()] = false;
-            }
-        });
-
-        // 更新玩家位置的函数现在需要同时处理键盘和触屏输入
+        // 修改updatePlayerPosition函数
         function updatePlayerPosition() {
             let dx = 0;
             let dy = 0;
 
-            // 键盘输入
-            if (keys.w) dy -= 1;
-            if (keys.s) dy += 1;
-            if (keys.a) dx -= 1;
-            if (keys.d) dx += 1;
-
-            // 触屏输入
-            if (joystickData.touching) {
-                dx += joystickData.moveX;
-                dy += joystickData.moveY;
+            if (isMobile()) {
+                // 触屏控制
+                if (touchPos.touching) {
+                    // 计算玩家应该移动的方向
+                    dx = touchPos.x - game.player.x;
+                    dy = touchPos.y - game.player.y;
+                    // 标准化向量
+                    const length = Math.sqrt(dx * dx + dy * dy);
+                    if (length > 0) {
+                        dx = dx / length;
+                        dy = dy / length;
+                    }
+                }
+            } else {
+                // 电脑端键盘控制
+                if (keys.w) dy -= 1;
+                if (keys.s) dy += 1;
+                if (keys.a) dx -= 1;
+                if (keys.d) dx += 1;
+                
+                // 标准化向量
+                if (dx !== 0 || dy !== 0) {
+                    const length = Math.sqrt(dx * dx + dy * dy);
+                    dx = dx / length;
+                    dy = dy / length;
+                }
             }
 
-            // 标准化向量
+            // 更新玩家位置
             if (dx !== 0 || dy !== 0) {
-                const length = Math.sqrt(dx * dx + dy * dy);
-                dx = dx / length;
-                dy = dy / length;
+                game.player.x += dx * game.player.speed;
+                game.player.y += dy * game.player.speed;
+                
+                // 确保玩家不会移出画布
+                game.player.x = Math.max(game.player.size, Math.min(canvas.width - game.player.size, game.player.x));
+                game.player.y = Math.max(game.player.size, Math.min(canvas.height - game.player.size, game.player.y));
             }
-
-            game.player.x += dx * game.player.speed;
-            game.player.y += dy * game.player.speed;
-
-            // 确保玩家不会移出画布
-            game.player.x = Math.max(game.player.size, Math.min(canvas.width - game.player.size, game.player.x));
-            game.player.y = Math.max(game.player.size, Math.min(canvas.height - game.player.size, game.player.y));
         }
 
         // 在 update 函数中替换原有的玩家移动代码
@@ -457,20 +390,42 @@
             game.lastShot = now;
         }
 
+        // 1. 先，将图片加载移到游戏初始化时
+        const playerImg = new Image();
+        let playerImgLoaded = false;
+
+        // 在游戏开始前加载图片
+        playerImg.onload = function() {
+            playerImgLoaded = true;
+            console.log('Player image loaded successfully');
+        };
+        playerImg.onerror = function() {
+            console.error('Failed to load player image');
+            playerImgLoaded = false;
+        };
+        playerImg.src = './imgs/juzi.png';
+
+        // 2. 修改draw函数中的玩家绘制部分
         function draw() {
             ctx.fillStyle = '#111';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // 画玩家 - 调整大小
-            const playerImg = new Image();
-            playerImg.src = './imgs/juzi.png';
-            const playerDisplaySize = game.player.size * 1.5; // 调整显示大小，可以根据需要修改倍数
-            ctx.drawImage(playerImg, 
-                game.player.x - playerDisplaySize, 
-                game.player.y - playerDisplaySize, 
-                playerDisplaySize * 2, 
-                playerDisplaySize * 2
-            );
+            // 画玩家
+            const playerDisplaySize = game.player.size * 1.5;
+            if (playerImgLoaded) {
+                ctx.drawImage(playerImg, 
+                    game.player.x - playerDisplaySize, 
+                    game.player.y - playerDisplaySize, 
+                    playerDisplaySize * 2, 
+                    playerDisplaySize * 2
+                );
+            } else {
+                // 如果图片未加载，显示一个占位符
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(game.player.x, game.player.y, playerDisplaySize, 0, Math.PI * 2);
+                ctx.fill();
+            }
 
             // 画子弹
             ctx.fillStyle = '#ff0';
@@ -563,20 +518,37 @@
         function initGameEnvironment() {
             if (isMobile()) {
                 // 手机端特定设置
-                game.shotDelay = 300; // 略微降低射击频率
-                game.player.speed = Math.min(window.innerWidth, window.innerHeight) * 0.01; // 根据屏幕大小调整速度
-                
-                // 显示虚拟摇杆
-                const joystick = document.getElementById('joystick');
-                if (joystick) {
-                    joystick.style.display = 'block';
-                }
+                game.shotDelay = 300;
+                game.player.speed = Math.min(window.innerWidth, window.innerHeight) * 0.01;
                 
                 // 添加阻止页面滚动
                 document.body.style.overflow = 'hidden';
                 document.body.style.position = 'fixed';
             }
         }
+
+        // 在游戏初始化部分添加键盘控制
+        const keys = {
+            w: false,
+            s: false,
+            a: false,
+            d: false
+        };
+
+        document.addEventListener('keydown', (e) => {
+            if (keys.hasOwnProperty(e.key.toLowerCase())) {
+                keys[e.key.toLowerCase()] = true;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (keys.hasOwnProperty(e.key.toLowerCase())) {
+                keys[e.key.toLowerCase()] = false;
+            }
+        });
+
+        // 确保在游戏初始化时调用
+        initGameEnvironment();
 
         gameLoop();
     </script>
