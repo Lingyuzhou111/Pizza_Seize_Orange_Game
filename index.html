@@ -93,15 +93,7 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
-        // 在 script 标签开始处添加设备检测函数
-        function isMobileDevice() {
-            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        }
-
-        // 添加一个全局的缩放系数
-        const scaleFactor = isMobileDevice() ? 0.6 : 1;
-
-        // 修改 resizeCanvas 函数，增加移动设备的边界扩展
+        // 设置画布大小为窗口大小
         function resizeCanvas() {
             const maxWidth = 800;
             const maxHeight = 600;
@@ -114,15 +106,6 @@
             } else {
                 canvas.height = window.innerHeight * 0.95;
                 canvas.width = canvas.height * gameRatio;
-            }
-
-            // 如果是移动设备，重新初始化游戏对象
-            if (isMobileDevice()) {
-                game.player.size = 25 * scaleFactor;
-                game.player.speed = 5 * scaleFactor;
-                // 重新设置玩家位置
-                game.player.x = canvas.width / 2;
-                game.player.y = canvas.height / 2;
             }
         }
 
@@ -367,50 +350,47 @@
             return nearestEnemy;
         }
 
-        // 修改 spawnEnemy 函数，调整敌人大小和出生位置
         function spawnEnemy() {
             const side = Math.floor(Math.random() * 4);
             let x, y;
-            const extraSpace = isMobileDevice() ? canvas.height * 0.2 : 0; // 额外的移动空间
             
             switch(side) {
                 case 0: // top
                     x = Math.random() * canvas.width;
-                    y = -20 - extraSpace;
+                    y = -20;
                     break;
                 case 1: // right
                     x = canvas.width + 20;
-                    y = Math.random() * (canvas.height + extraSpace * 2) - extraSpace;
+                    y = Math.random() * canvas.height;
                     break;
                 case 2: // bottom
                     x = Math.random() * canvas.width;
-                    y = canvas.height + 20 + extraSpace;
+                    y = canvas.height + 20;
                     break;
                 case 3: // left
                     x = -20;
-                    y = Math.random() * (canvas.height + extraSpace * 2) - extraSpace;
+                    y = Math.random() * canvas.height;
                     break;
             }
 
             game.enemies.push({
                 x: x,
                 y: y,
-                size: 20 * scaleFactor,
-                speed: (1 + Math.random() * game.difficulty * 0.5) * scaleFactor,
-                baseSpeed: (1 + Math.random() * game.difficulty * 0.5) * scaleFactor
+                size: 20,
+                speed: 1 + Math.random() * game.difficulty * 0.5,
+                baseSpeed: 1 + Math.random() * game.difficulty * 0.5
             });
         }
 
-        // 修改 spawnPowerup 函数，调整道具大小
         function spawnPowerup(x, y) {
             const rand = Math.random() * 100;
             let type = null;
             
-            if (rand < 1) {
+            if (rand < 1) {  // 1% 概率掉落清屏道具
                 type = 'clearAll';
-            } else if (rand < 3) {
+            } else if (rand < 3) {  // 2% 概率掉落子弹+1道具
                 type = 'addBullet';
-            } else if (rand < 8) {
+            } else if (rand < 8) {  // 5% 概率掉落减速道具
                 type = 'slowEnemies';
             }
 
@@ -419,7 +399,7 @@
                     x: x,
                     y: y,
                     type: type,
-                    size: 15 * scaleFactor
+                    size: 15  // 稍微增加道具大小以便显示emoji
                 });
             }
         }
@@ -448,7 +428,6 @@
             game.lastShot = now;
         }
 
-        // 修改 draw 函数中的相关渲染大小
         function draw() {
             ctx.fillStyle = '#111';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -456,7 +435,7 @@
             // 画玩家 - 调整大小
             const playerImg = new Image();
             playerImg.src = './imgs/juzi.png';
-            const playerDisplaySize = game.player.size * 1.5 * scaleFactor; // 调整显示大小，可以根据需要修改倍数
+            const playerDisplaySize = game.player.size * 1.5; // 调整显示大小，可以根据需要修改倍数
             ctx.drawImage(playerImg, 
                 game.player.x - playerDisplaySize, 
                 game.player.y - playerDisplaySize, 
@@ -468,12 +447,12 @@
             ctx.fillStyle = '#ff0';
             game.bullets.forEach(bullet => {
                 ctx.beginPath();
-                ctx.arc(bullet.x, bullet.y, 3 * scaleFactor, 0, Math.PI * 2);
+                ctx.arc(bullet.x, bullet.y, 3, 0, Math.PI * 2);
                 ctx.fill();
             });
 
             // 画敌人 - 使用emoji
-            ctx.font = `${game.player.size * 2 * scaleFactor}px Arial`;
+            ctx.font = `${game.player.size * 2}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             game.enemies.forEach(enemy => {
@@ -481,7 +460,7 @@
             });
 
             // 画道具 - 使用emoji
-            ctx.font = `${game.player.size * scaleFactor}px Arial`;  // 设置emoji大小
+            ctx.font = `${game.player.size}px Arial`;  // 设置emoji大小
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             game.powerups.forEach(powerup => {
@@ -512,14 +491,13 @@
             document.getElementById('finalKills').textContent = game.kills;
         }
 
-        // 修改 restartGame 函数中的初始化大小
         function restartGame() {
             game = {
                 player: {
                     x: canvas.width / 2,
                     y: canvas.height / 2,
-                    size: 25 * scaleFactor,
-                    speed: 5 * scaleFactor,
+                    size: 25,
+                    speed: 5,
                     bulletCount: 1
                 },
                 bullets: [],
