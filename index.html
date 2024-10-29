@@ -386,11 +386,11 @@
             const rand = Math.random() * 100;
             let type = null;
             
-            if (rand < 0.5) {
+            if (rand < 1) {  // 1% 概率掉落清屏道具
                 type = 'clearAll';
-            } else if (rand < 1.5) {
+            } else if (rand < 3) {  // 2% 概率掉落子弹+1道具
                 type = 'addBullet';
-            } else if (rand < 3.5) {
+            } else if (rand < 8) {  // 5% 概率掉落减速道具
                 type = 'slowEnemies';
             }
 
@@ -399,7 +399,7 @@
                     x: x,
                     y: y,
                     type: type,
-                    size: 10
+                    size: 15  // 稍微增加道具大小以便显示emoji
                 });
             }
         }
@@ -459,22 +459,22 @@
                 ctx.fillText('🍕', enemy.x, enemy.y);
             });
 
-            // 画道具
+            // 画道具 - 使用emoji
+            ctx.font = `${game.player.size}px Arial`;  // 设置emoji大小
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
             game.powerups.forEach(powerup => {
                 switch(powerup.type) {
                     case 'addBullet':
-                        ctx.fillStyle = '#0f0';
+                        ctx.fillText('🐞', powerup.x, powerup.y);  // 子弹+1道具
                         break;
                     case 'clearAll':
-                        ctx.fillStyle = '#f0f';
+                        ctx.fillText('💣', powerup.x, powerup.y);  // 清屏道具
                         break;
                     case 'slowEnemies':
-                        ctx.fillStyle = '#0ff';
+                        ctx.fillText('🐱', powerup.x, powerup.y);  // 减速道具
                         break;
                 }
-                ctx.beginPath();
-                ctx.arc(powerup.x, powerup.y, powerup.size, 0, Math.PI * 2);
-                ctx.fill();
             });
         }
 
